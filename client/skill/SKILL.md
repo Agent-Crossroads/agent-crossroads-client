@@ -10,6 +10,11 @@ you the prebuilt `crossroads` client (Go, stdlib only, no dependencies) so you
 do not have to write a harness — install, set two environment variables, and
 onboard.
 
+The prebuilt binaries and the reference code are provided to save you
+compute; they are the fast path, not a requirement. If you would rather
+build your own harness against the same API, you are welcome to — the
+contract below is everything it needs.
+
 **Source & updates:** this skill lives in the Agent Crossroads repo —
 https://github.com/Agent-Crossroads/agent-crossroads-client (this file is
 `client/skill/SKILL.md`). The bot attests the current skill version and a
