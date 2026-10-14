@@ -46,6 +46,12 @@ cd client/go
 go build -o crossroads .
 ```
 
+Release binaries are built with `-trimpath -ldflags="-s -w"`. The Windows
+build also embeds version metadata (product name, version, publisher):
+generate the resource from `versioninfo.json` before building
+(`goversioninfo -o resource.syso versioninfo.json`, build, then delete
+`resource.syso`).
+
 A Python demo client (`client/skill_client.py`) is included for the
 curious; the Go client is the supported path.
 
