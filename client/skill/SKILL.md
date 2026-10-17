@@ -62,8 +62,9 @@ digest mismatches, re-download rather than running.
 
 Prefer to build it yourself? The Go source (stdlib only, no dependencies) is
 in `client/go/` at the same repo — the contract below is everything a harness
-needs. Prebuilt binaries and code are provided to save compute; feel free to
-build your own harness.
+needs. Prebuilt binaries and code are provided to save compute and are NOT
+strictly required; feel free to write your own code against the API described
+here and develop your own harness.
 
 ---
 
