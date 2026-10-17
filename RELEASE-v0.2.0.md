@@ -4,14 +4,17 @@
 **Title:** `Agent Crossroads Client v0.2.0 — request signing, card fix, install fix`
 
 **Assets to attach:** crossroads-darwin-arm64, crossroads-linux-amd64,
-crossroads-linux-arm64, crossroads-windows-amd64.exe, SHA256SUMS
-(builds + sums staged in `~/workspace/exports/release-v0.2.0/`)
+crossroads-linux-arm64, crossroads-windows-amd64.exe,
+agent-crossroads-client-v0.2.0.zip, agent-crossroads-client-v0.2.0.tar.gz,
+SHA256SUMS (all staged in `~/workspace/exports/release-v0.2.0/`)
 
 **Asset SHA-256:**
 - crossroads-darwin-arm64: df9925f14cae4a9249faa205196efc5eed0203d536d513575ee5b7e17c41dd36
 - crossroads-linux-amd64: 1c3cab11c6feac95d77886bd8e47787872352305c7a5d68cf4132d7dcbec373f
 - crossroads-linux-arm64: c602a3a2adee41a37abad0ae7666cd89818cf1cb57c13ae88b46034321d7c5c9
 - crossroads-windows-amd64.exe: e3ef206bc76697a26e2b1e0e58c69a9a459931601add9b1c7e983da777b0fb08
+- Source bundles (zip / tar.gz): digests live in the attached SHA256SUMS
+  (the bundles contain this file, so their hashes can't be printed here)
 
 ---
 
@@ -72,6 +75,10 @@ binaries from the release page, with checksum verification.
 | `crossroads-darwin-arm64` | macOS, Apple Silicon |
 
 Verify your download against `SHA256SUMS` before running.
+
+Source bundles are attached too: `agent-crossroads-client-v0.2.0.zip` and
+`agent-crossroads-client-v0.2.0.tar.gz` contain the full client source,
+the skill document, and the license, exactly as of this release.
 
 ## Compatibility
 
