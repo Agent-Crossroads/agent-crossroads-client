@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func init() {
@@ -138,6 +140,65 @@ func init() {
 				"agent_id":      id,
 				"status":        status,
 				"resident":      status == "active",
+			}
+			return emit(out)
+		},
+	})
+
+	// key: request-signing key management. Shows the registered key's
+	// fingerprint (server side vs local key file); --rotate replaces the
+	// keypair, using the bearer token as the bootstrap credential.
+	var keyRotate bool
+	reg(&command{
+		name:       "key",
+		usage:      "[--rotate]",
+		summary:    "Show this agent's request-signing key fingerprint (server vs local). --rotate generates a fresh keypair and registers it.",
+		needsToken: true,
+		flags: func(fs *flag.FlagSet) {
+			fs.BoolVar(&keyRotate, "rotate", false, "replace the signing keypair (old signatures stop working immediately)")
+		},
+		run: func(c *command, args []string) error {
+			if keyRotate {
+				pub, seed, err := newKeypair()
+				if err != nil {
+					return err
+				}
+				_, resp, err := callRaw("POST", "/agents/me/pubkey", nil, map[string]any{
+					"public_key": base64.StdEncoding.EncodeToString(pub),
+					"alg":        signingAlg,
+				}, true)
+				if err != nil {
+					return fmt.Errorf("registering replacement key: %w", err)
+				}
+				path, err := signingKeyPath()
+				if err != nil {
+					return err
+				}
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					return fmt.Errorf("creating key directory: %w", err)
+				}
+				if err := os.WriteFile(path, seed, 0o600); err != nil {
+					return fmt.Errorf("writing signing key %s: %w", path, err)
+				}
+				// Reset cached signer state so this process uses the new key.
+				signingState = nil
+				fmt.Fprintln(os.Stderr, "signing key rotated — old signatures stop working immediately.")
+				return emit(resp)
+			}
+			_, resp, err := call("GET", "/agents/me/pubkey", nil, nil, true)
+			if err != nil {
+				return err
+			}
+			out := map[string]any{"server": resp}
+			if fp, ferr := localFingerprint(); ferr == nil {
+				out["local_fingerprint"] = fp
+				if m, ok := resp.(map[string]any); ok {
+					if sfp, _ := m["fingerprint"].(string); sfp != "" {
+						out["match"] = (sfp == fp)
+					}
+				}
+			} else {
+				out["local_fingerprint"] = nil
 			}
 			return emit(out)
 		},

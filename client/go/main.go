@@ -138,15 +138,16 @@ func readContent(arg string) (string, error) {
 
 var httpClient = &http.Client{Timeout: 60 * time.Second}
 
-// call issues one API request and returns the decoded JSON body.
-func call(method, path string, query map[string]string, body any, needToken bool) (int, any, error) {
+// buildRequest constructs the HTTP request and returns the exact body
+// bytes that will be sent (needed for request signing).
+func buildRequest(method, path string, query map[string]string, body any, needToken bool) (*http.Request, []byte, error) {
 	base, err := baseURL()
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
 	u, err := url.Parse(base + path)
 	if err != nil {
-		return 0, nil, fmt.Errorf("bad URL: %w", err)
+		return nil, nil, fmt.Errorf("bad URL: %w", err)
 	}
 	q := u.Query()
 	for k, v := range query {
@@ -154,17 +155,17 @@ func call(method, path string, query map[string]string, body any, needToken bool
 	}
 	u.RawQuery = q.Encode()
 
-	var rdr io.Reader
+	var bodyBytes []byte
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return 0, nil, fmt.Errorf("encoding request: %w", err)
+			return nil, nil, fmt.Errorf("encoding request: %w", err)
 		}
-		rdr = bytes.NewReader(b)
+		bodyBytes = b
 	}
-	req, err := http.NewRequest(method, u.String(), rdr)
+	req, err := http.NewRequest(method, u.String(), bytes.NewReader(bodyBytes))
 	if err != nil {
-		return 0, nil, fmt.Errorf("building request: %w", err)
+		return nil, nil, fmt.Errorf("building request: %w", err)
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -172,10 +173,15 @@ func call(method, path string, query map[string]string, body any, needToken bool
 	if needToken {
 		t, err := token()
 		if err != nil {
-			return 0, nil, err
+			return nil, nil, err
 		}
 		req.Header.Set("Authorization", "Bearer "+t)
 	}
+	return req, bodyBytes, nil
+}
+
+// doRequest performs the request and decodes the JSON body.
+func doRequest(req *http.Request) (int, any, error) {
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("request failed: %w", err)
@@ -195,6 +201,38 @@ func call(method, path string, query map[string]string, body any, needToken bool
 		return resp.StatusCode, decoded, &apiError{status: resp.StatusCode, body: decoded}
 	}
 	return resp.StatusCode, decoded, nil
+}
+
+// callRaw issues one API request without attempting request signing
+// (used for key registration itself and by commands that predate signing).
+func callRaw(method, path string, query map[string]string, body any, needToken bool) (int, any, error) {
+	req, _, err := buildRequest(method, path, query, body, needToken)
+	if err != nil {
+		return 0, nil, err
+	}
+	return doRequest(req)
+}
+
+// call issues one API request and returns the decoded JSON body. When the
+// command is authenticated and a signing key is available (creating and
+// registering one on first use), the request is signed; see signing.go.
+func call(method, path string, query map[string]string, body any, needToken bool) (int, any, error) {
+	req, bodyBytes, err := buildRequest(method, path, query, body, needToken)
+	if err != nil {
+		return 0, nil, err
+	}
+	if needToken {
+		s, err := ensureSigner()
+		if err != nil {
+			return 0, nil, err
+		}
+		if s != nil {
+			if err := s.signRequest(req, bodyBytes); err != nil {
+				return 0, nil, err
+			}
+		}
+	}
+	return doRequest(req)
 }
 
 type apiError struct {
